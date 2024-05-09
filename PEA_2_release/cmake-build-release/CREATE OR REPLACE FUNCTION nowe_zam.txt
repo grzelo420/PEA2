@@ -1,0 +1,92 @@
+CREATE OR REPLACE FUNCTION nowe_zamowienie(p_id_klienta INTEGER, p_data_zlozenia DATE, p_data_przyjecia DATE, p_data_wysylki DATE, p_data_oplacenia DATE, p_cena_zakupu DECIMAL)
+RETURNS VOID AS $$
+DECLARE
+    v_id_zamowienia INTEGER;
+BEGIN
+   
+    INSERT INTO Zamowienia (id_klienta, data_zlozenia_zamowienia, data_przyjecia_zamowienia, data_wysylki, data_oplacenia, cena_zakupu)
+    VALUES (p_id_klienta, p_data_zlozenia, p_data_przyjecia, p_data_wysylki, p_data_oplacenia, p_cena_zakupu)
+    RETURNING id_zamowienia INTO v_id_zamowienia;
+
+  
+    INSERT INTO Zamowienia_Produkty (id_zamowienia, id_produkt, ilosc, cena_produktu)
+    VALUES (v_id_zamowienia, 1, 2, 100.00);
+END;
+$$ LANGUAGE postgres;
+
+
+CREATE OR REPLACE FUNCTION aktualizuj_dane_kontaktowe(p_id_osoba INTEGER, p_nowy_email VARCHAR(64), p_nowy_numer INTEGER, p_nowy_adres_id INTEGER)
+RETURNS VOID AS $$
+BEGIN
+   
+
+    UPDATE "Adresy email_Osoby" SET id_email = p_nowy_email WHERE id_osoba = p_id_osoba;
+
+    UPDATE "Numery telefonu_Osoby" SET id_telefon = p_nowy_numer WHERE id_osoba = p_id_osoba;
+
+    UPDATE Osoby_Adresy SET id_adres = p_nowy_adres_id WHERE id_osoba = p_id_osoba;
+END;
+$$ LANGUAGE postgres;
+
+
+CREATE OR REPLACE FUNCTION obsluga_zwrotu(p_id_zwrotu INTEGER, p_id_produktu INTEGER, p_ilosc INTEGER, p_cena DECIMAL)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO Zwrot_Produkty (id_zwrotu, id_produktu, ilosc, cena)
+    VALUES (p_id_zwrotu, p_id_produktu, p_ilosc, p_cena);
+
+    UPDATE Produkty SET stan_magazynowy = stan_magazynowy - p_ilosc WHERE id_produkt = p_id_produktu;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION aktualizuj_stan_magazynowy(p_id_produktu INTEGER, p_ilosc INTEGER)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE Produkty SET stan_magazynowy = stan_magazynowy + p_ilosc WHERE id_produkt = p_id_produktu;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION nowy_klient(p_id_osoba SERIAL, p_login VARCHAR(64) NOT NULL UNIQUE, p_haslo VARCHAR(64) NOT NULL, p_imie VARCHAR(20), p_nazwisko VARCHAR(50), p_nowy_email VARCHAR(64), p_nowy_numer INTEGER, p_nowy_adres_id INTEGER)
+RETURNS VOID AS $$
+BEGIN
+    INSERT INTO Uzytkownik (id_osoba, Login, Haslo, Imie, Nazwisko)
+    VALUES (p_id_osoba, p_login, p_haslo, p_imie, p_nazwisko);
+
+    INSERT INTO "Adresy email_Osoby" (id_osoba, id_email)
+    VALUES (p_id_osoba, p_nowy_email);
+
+    INSERT INTO "Numery telefonu_Osoby" (id_osoba, id_telefon)
+    VALUES (p_id_osoba, p_nowy_numer);
+
+    -- Dodanie adresu
+    INSERT INTO Osoby_Adresy (id_osoba, id_adres)
+    VALUES (p_id_osoba, p_nowy_adres_id);
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION generuj_raport_sprzedazy(p_data_poczatkowa DATE, p_data_koncowa DATE)
+RETURNS TABLE (
+    nazwa_produktu VARCHAR(45),
+    ilosc_sprzedanych INTEGER,
+    przychod DECIMAL(10, 2)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        p.nazwa_produktu,
+        SUM(zp.ilosc) AS ilosc_sprzedanych,
+        SUM(zp.ilosc * zp.cena_produktu) AS przychod
+    FROM
+        Zamowienia z
+        JOIN Zamowienia_Produkty zp ON z.id_zamowienia = zp.id_zamowienia
+        JOIN Produkty p ON zp.id_produkt = p.id_produkt
+    WHERE
+        z.data_zlozenia_zamowienia BETWEEN p_data_poczatkowa AND p_data_koncowa
+    GROUP BY
+        p.nazwa_produktu;
+END;
+$$ LANGUAGE plpgsql;
+
+

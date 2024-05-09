@@ -1,0 +1,6 @@
+# ninja log v5
+14	684	7242711964299972	CMakeFiles/PEA_2_release.dir/main.cpp.obj	5efa92d06d48f475
+1	864	7242711966082862	CMakeFiles/PEA_2_release.dir/src/Menu.cpp.obj	4af0de985e527aaa
+21	900	7242711966461984	CMakeFiles/PEA_2_release.dir/src/Graph.cpp.obj	2d5a62ceb0e383e3
+8	1368	7242711971077142	CMakeFiles/PEA_2_release.dir/src/SymulowaneWyzarzanie.cpp.obj	7a57bde7f80345bb
+1369	1515	7242711972590462	PEA_2_release.exe	4712168f5162fff6
